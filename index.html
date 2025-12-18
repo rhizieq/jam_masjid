@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jam Masjid Nurul Ilmi ITPLN (Light Mode)</title>
+    
+    <!-- Tailwind CSS (via CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Oswald:wght@300;500;700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* Custom Styles & Animations */
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f1f5f9; /* Slate 100 */
+            /* Background Light Mode: Overlay Putih Transparan di atas gambar ITPLN */
+            background-image: linear-gradient(rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.7)), url('https://storage.googleapis.com/danacita-website-v3-prd/website_v3/images/Gedung_IT_PLN.original.jpg'); 
+            background-size: cover;
+            background-position: center;
+            overflow: hidden; /* Prevent scrolling on TV */
+        }
+
+        .font-arab {
+            font-family: 'Amiri', serif;
+        }
+
+        .font-clock {
+            font-family: 'Oswald', sans-serif;
+        }
+
+        /* Glassmorphism Effect - Light Version */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.65); /* White glass */
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05); /* Softer shadow */
+        }
+
+        .prayer-card {
+            transition: all 0.3s ease;
+        }
+
+        /* Active State - Tetap Hijau tapi text dipaksa putih */
+        .prayer-card.active {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%); /* Emerald Gradient */
+            transform: scale(1.05);
+            border: 2px solid #34d399;
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+        }
+        
+        /* Force text white on active card to override dark text classes */
+        .prayer-card.active * {
+            color: white !important;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* Running Text Animation */
+        .marquee-container {
+            overflow: hidden;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .marquee-text {
+            display: inline-block;
+            padding-left: 100%;
+            animation: marquee 25s linear infinite;
+        }
+
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
+
+        /* Blinking Separator for Clock */
+        .blink {
+            animation: blinker 1s linear infinite;
+        }
+        @keyframes blinker {
+            50% { opacity: 0; }
+        }
+
+        /* OVERLAY STYLES (Adzan/Iqomah) */
+        #overlay-screen {
+            display: none; /* Hidden by default */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #020617; /* Very Dark Slate */
+            z-index: 9999;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+        }
+
+        .overlay-active {
+            display: flex !important;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col text-slate-800 selection:bg-emerald-500 selection:text-white">
+
+    <!-- OVERLAY SCREEN (Hidden by default) -->
+    <div id="overlay-screen">
+        <div id="overlay-status" class="text-3xl font-light tracking-[0.5em] text-emerald-400 mb-4 animate-pulse uppercase">
+            MEMASUKI WAKTU
+        </div>
+        <h1 id="overlay-title" class="text-7xl md:text-9xl font-bold font-clock text-white mb-8 drop-shadow-2xl">
+            ADZAN
+        </h1>
+        
+        <!-- Countdown Timer (Hidden during Adzan) -->
+        <div id="iqomah-counter-container" class="hidden flex-col items-center">
+             <div class="text-2xl text-gray-400 mb-2">Menuju Iqomah</div>
+             <div id="iqomah-timer" class="text-[10rem] md:text-[15rem] leading-none font-clock font-bold text-yellow-400">
+                10:00
+             </div>
+        </div>
+
+        <div id="overlay-message" class="text-xl md:text-3xl text-gray-300 mt-8 max-w-4xl px-4">
+            Silakan persiapkan diri untuk shalat berjamaah
+        </div>
+
+        <!-- Button to close manually (hidden but accessible for admin) -->
+        <button onclick="closeOverlay()" class="absolute top-4 right-4 opacity-10 hover:opacity-100 text-white border border-white px-3 py-1 rounded">
+            X
+        </button>
+    </div>
+
+    <!-- TOP BAR: Logo, Name, Date, Clock -->
+    <header class="h-[25vh] w-full p-6 flex justify-between items-center glass-panel z-10 relative">
+        <!-- Left: Logo & Masjid Name -->
+        <div class="flex items-center gap-6">
+            <!-- Logo Container -->
+            <div class="w-24 h-24 bg-white/50 rounded-full flex items-center justify-center border-2 border-emerald-500 shadow-lg relative overflow-hidden">
+                 <i class="fas fa-mosque text-5xl text-emerald-600"></i>
+            </div>
+            <div>
+                <h1 class="text-5xl font-bold tracking-wide text-emerald-700 drop-shadow-sm font-clock uppercase">Masjid Nurul Ilmi</h1>
+                <h2 class="text-2xl text-slate-600 font-light tracking-widest mt-1">INSTITUT TEKNOLOGI PLN</h2>
+                <div class="mt-2 text-sm text-emerald-700 bg-emerald-100 border border-emerald-200 px-3 py-1 rounded-full inline-block font-medium">
+                    <i class="fas fa-map-marker-alt mr-2"></i>Cengkareng, Jakarta Barat
+                </div>
+            </div>
+        </div>
+
+        <!-- Center: Date (Masehi & Hijri) -->
+        <div class="text-center hidden xl:block">
+            <div id="date-masehi" class="text-3xl font-bold text-slate-800">Loading...</div>
+            <div id="date-hijri" class="text-2xl text-emerald-600 font-arab mt-1 font-bold">Loading...</div>
+        </div>
+
+        <!-- Right: Digital Clock -->
+        <div class="flex flex-col items-end">
+            <div class="text-8xl font-bold font-clock tracking-wider leading-none flex items-baseline drop-shadow-sm text-slate-800">
+                <span id="clock-hours">00</span>
+                <span class="blink text-emerald-600 mx-1">:</span>
+                <span id="clock-minutes">00</span>
+                <span class="text-3xl text-slate-500 ml-2 font-medium" id="clock-seconds">00</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT: Prayer Times Grid -->
+    <main class="flex-grow flex items-center justify-center p-8 relative z-0">
+        <!-- Background Overlay removed/adjusted in body style for light theme -->
+        
+        <div class="w-full grid grid-cols-6 gap-6" id="prayer-grid">
+            <!-- Cards will be injected here by JS -->
+            <div class="col-span-6 text-center text-2xl text-slate-600 animate-pulse font-medium">
+                Memuat Jadwal Shalat Jakarta Barat...
+            </div>
+        </div>
+    </main>
+
+    <!-- BOTTOM BAR: Info & Running Text -->
+    <!-- Footer tetap gelap (Emerald kuat) untuk kontras yang bagus dan kesan 'official' -->
+    <footer class="h-[12vh] bg-emerald-700 border-t-4 border-yellow-400 flex relative z-10 shadow-2xl">
+        <div class="w-[15%] bg-emerald-800 flex items-center justify-center text-white font-bold text-xl px-4 z-20 shadow-md">
+            <i class="fas fa-bullhorn mr-3 text-yellow-300"></i> INFO
+        </div>
+        <div class="w-[85%] flex items-center bg-emerald-700 overflow-hidden relative">
+            <div class="marquee-container w-full">
+                <!-- Ubah teks pengumuman di sini -->
+                <div class="marquee-text text-3xl font-medium text-white py-2">
+                    Selamat Datang di Masjid Nurul Ilmi Institut Teknologi PLN. Luruskan dan rapatkan shaf ketika shalat berjamaah. Mohon nonaktifkan alat komunikasi selama berada di dalam masjid. Jagalah kebersihan dan ketertiban area masjid.
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- CONFIGURATION ---
+        const CITY_ID = '1642911'; 
+        const COORDINATES = { lat: '-6.1702', lng: '106.7496' }; 
+        const PRAYER_NAMES = ['Subuh', 'Terbit', 'Dzuhur', 'Ashar', 'Maghrib', 'Isya'];
+        
+        // Timer Settings (In Minutes)
+        const DURATION_ADZAN = 3; 
+        const DURATION_IQOMAH_NORMAL = 10;
+        const DURATION_KHUTBAH_JUMAT = 25;
+        const DURATION_SHALAT_MESSAGE = 1;
+
+        // State
+        let prayerTimes = {};
+        let isOverlayActive = false;
+        let countdownInterval = null;
+        
+        // --- CLOCK & DATE FUNCTION ---
+        function updateClock() {
+            const now = new Date();
+            
+            // Time
+            const h = String(now.getHours()).padStart(2, '0');
+            const m = String(now.getMinutes()).padStart(2, '0');
+            const s = String(now.getSeconds()).padStart(2, '0');
+            
+            document.getElementById('clock-hours').innerText = h;
+            document.getElementById('clock-minutes').innerText = m;
+            document.getElementById('clock-seconds').innerText = s;
+
+            // Date Masehi
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('date-masehi').innerText = now.toLocaleDateString('id-ID', options);
+
+            // Check Active Prayer Highlight
+            highlightActivePrayer(h, m);
+
+            // Check if we need to trigger Adzan (Only if overlay is NOT active)
+            if (!isOverlayActive && Object.keys(prayerTimes).length > 0) {
+                checkPrayerTrigger(h, m, s, now.getDay()); // Pass 's' for seconds precision if needed, and Day index
+            }
+        }
+
+        // --- HIJRI DATE ---
+        function getHijriDate() {
+            const now = new Date();
+            const formatter = new Intl.DateTimeFormat('id-ID-u-ca-islamic', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+            document.getElementById('date-hijri').innerText = formatter.format(now) + " H";
+        }
+
+        // --- FETCH PRAYER TIMES ---
+        async function fetchPrayerTimes() {
+            try {
+                const date = new Date();
+                const day = date.getDate();
+                const month = date.getMonth() + 1;
+                const year = date.getFullYear();
+
+                const apiUrl = `https://api.aladhan.com/v1/timings/${day}-${month}-${year}?latitude=${COORDINATES.lat}&longitude=${COORDINATES.lng}&method=20`;
+                
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                
+                if(data.code === 200) {
+                    const timings = data.data.timings;
+                    prayerTimes = {
+                        'Subuh': timings.Fajr,
+                        'Terbit': timings.Sunrise,
+                        'Dzuhur': timings.Dhuhr,
+                        'Ashar': timings.Asr,
+                        'Maghrib': timings.Maghrib,
+                        'Isya': timings.Isha
+                    };
+                    renderPrayerCards();
+                } else {
+                    console.error("API Error");
+                    useOfflineData();
+                }
+            } catch (error) {
+                console.error("Fetch Error:", error);
+                useOfflineData();
+            }
+        }
+
+        function useOfflineData() {
+             prayerTimes = {
+                'Subuh': '04:35',
+                'Terbit': '05:50',
+                'Dzuhur': '12:05',
+                'Ashar': '15:20',
+                'Maghrib': '18:10',
+                'Isya': '19:20'
+            };
+            renderPrayerCards();
+            const grid = document.getElementById('prayer-grid');
+            const errDiv = document.createElement('div');
+            errDiv.className = "absolute top-0 right-0 text-red-500 bg-white/80 rounded px-2 text-xs p-2 font-bold";
+            errDiv.innerText = "Mode Offline";
+            document.body.appendChild(errDiv);
+        }
+
+        // --- RENDER UI ---
+        function renderPrayerCards() {
+            const grid = document.getElementById('prayer-grid');
+            grid.innerHTML = ''; 
+
+            PRAYER_NAMES.forEach(name => {
+                const time = prayerTimes[name];
+                
+                const card = document.createElement('div');
+                card.id = `card-${name}`;
+                card.className = `prayer-card glass-panel rounded-xl p-4 flex flex-col items-center justify-center relative overflow-hidden group`;
+                
+                let icon = 'fa-mosque';
+                if (name === 'Terbit') icon = 'fa-sun';
+                if (name === 'Isya' || name === 'Subuh') icon = 'fa-moon';
+
+                card.innerHTML = `
+                    <div class="text-emerald-600 mb-2 opacity-90 group-hover:opacity-100 transition-opacity">
+                        <i class="fas ${icon} text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold text-slate-500 uppercase tracking-wider">${name}</h3>
+                    <div class="text-4xl font-bold font-clock text-slate-800 mt-1">${time}</div>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+
+        // --- HIGHLIGHT ACTIVE PRAYER ---
+        function highlightActivePrayer(currentHour, currentMinute) {
+            if (Object.keys(prayerTimes).length === 0) return;
+
+            const currentTimeVal = parseInt(currentHour) * 60 + parseInt(currentMinute);
+            let foundNext = false;
+
+            document.querySelectorAll('.prayer-card').forEach(el => {
+                el.classList.remove('active');
+                el.classList.add('glass-panel');
+            });
+
+            for (let i = 0; i < PRAYER_NAMES.length; i++) {
+                const name = PRAYER_NAMES[i];
+                if (name === 'Terbit') continue; 
+
+                const timeStr = prayerTimes[name];
+                if(!timeStr) continue;
+
+                const [pHour, pMin] = timeStr.split(':').map(Number);
+                const pTimeVal = pHour * 60 + pMin;
+
+                if (pTimeVal > currentTimeVal && !foundNext) {
+                    foundNext = true;
+                    const card = document.getElementById(`card-${name}`);
+                    if(card) {
+                        card.classList.add('active');
+                        card.classList.remove('glass-panel');
+                    }
+                }
+            }
+
+            if (!foundNext) {
+                 const card = document.getElementById(`card-Subuh`);
+                 if(card) card.classList.add('active');
+            }
+        }
+
+        // --- ADZAN & IQOMAH LOGIC ---
+        function checkPrayerTrigger(h, m, s, dayOfWeek) {
+            // Check every prayer
+            PRAYER_NAMES.forEach(name => {
+                if(name === 'Terbit') return; // Skip Sunrise
+
+                const timeStr = prayerTimes[name];
+                if(!timeStr) return;
+
+                if (timeStr === `${h}:${m}` && s === '00') {
+                    triggerAdzanSequence(name, dayOfWeek);
+                }
+            });
+        }
+
+        function triggerAdzanSequence(prayerName, dayOfWeek) {
+            isOverlayActive = true;
+            const overlay = document.getElementById('overlay-screen');
+            const title = document.getElementById('overlay-title');
+            const status = document.getElementById('overlay-status');
+            const timerContainer = document.getElementById('iqomah-counter-container');
+            const message = document.getElementById('overlay-message');
+
+            overlay.classList.add('overlay-active');
+            
+            // PHASE 1: ADZAN
+            status.innerText = "MEMASUKI WAKTU";
+            title.innerText = `ADZAN ${prayerName.toUpperCase()}`;
+            timerContainer.classList.add('hidden'); // Hide timer during Adzan
+            message.innerText = "Silakan dengarkan adzan dan jawablah panggilannya.";
+
+            // Wait for Adzan duration, then switch to Iqomah
+            // Using 3 minutes (180000ms) for Adzan Display
+            setTimeout(() => {
+                startIqomahCountdown(prayerName, dayOfWeek);
+            }, DURATION_ADZAN * 60 * 1000); 
+        }
+
+        function startIqomahCountdown(prayerName, dayOfWeek) {
+            const title = document.getElementById('overlay-title');
+            const status = document.getElementById('overlay-status');
+            const timerContainer = document.getElementById('iqomah-counter-container');
+            const timerDisplay = document.getElementById('iqomah-timer');
+            const message = document.getElementById('overlay-message');
+
+            timerContainer.classList.remove('hidden');
+            timerContainer.classList.add('flex');
+            title.style.display = 'none'; // Hide big title to make room for timer
+
+            let durationMinutes = DURATION_IQOMAH_NORMAL;
+
+            // Check Special Case: FRIDAY + DZUHUR
+            if (dayOfWeek === 5 && prayerName === 'Dzuhur') {
+                status.innerText = "KHUTBAH JUMAT";
+                message.innerText = "Harap diam dan dengarkan khutbah.";
+                durationMinutes = DURATION_KHUTBAH_JUMAT; // 25 Minutes
+            } else {
+                status.innerText = "MENUNGGU IQOMAH";
+                message.innerText = "Laksanakan shalat sunnah qobliyah dan berdzikir.";
+                durationMinutes = DURATION_IQOMAH_NORMAL; // 10 Minutes
+            }
+
+            let timeLeft = durationMinutes * 60; // Convert to seconds
+
+            // Update timer immediately
+            updateTimerDisplay(timeLeft, timerDisplay);
+
+            // Start Interval
+            if(countdownInterval) clearInterval(countdownInterval);
+            
+            countdownInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay(timeLeft, timerDisplay);
+
+                if (timeLeft <= 0) {
+                    clearInterval(countdownInterval);
+                    showShalatMessage();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay(seconds, displayElement) {
+            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const s = (seconds % 60).toString().padStart(2, '0');
+            displayElement.innerText = `${m}:${s}`;
+        }
+
+        function showShalatMessage() {
+            const title = document.getElementById('overlay-title');
+            const status = document.getElementById('overlay-status');
+            const timerContainer = document.getElementById('iqomah-counter-container');
+            const message = document.getElementById('overlay-message');
+
+            timerContainer.classList.remove('flex');
+            timerContainer.classList.add('hidden');
+            
+            title.style.display = 'block';
+            status.innerText = "SHALAT BERJAMAAH";
+            title.innerText = "LURUSKAN SHAF";
+            title.classList.add('text-red-500'); // Make text red/alert
+            title.classList.remove('text-white');
+            message.innerText = "Matikan alat komunikasi. Rapatkan barisan untuk kesempurnaan shalat.";
+
+            // Show this for 1 minute then close
+            setTimeout(() => {
+                closeOverlay();
+            }, DURATION_SHALAT_MESSAGE * 60 * 1000);
+        }
+
+        function closeOverlay() {
+            isOverlayActive = false;
+            if(countdownInterval) clearInterval(countdownInterval);
+            document.getElementById('overlay-screen').classList.remove('overlay-active');
+            
+            // Reset styles for next time
+            const title = document.getElementById('overlay-title');
+            title.classList.remove('text-red-500');
+            title.classList.add('text-white');
+            title.style.display = 'block';
+        }
+
+        // --- INITIALIZATION ---
+        window.onload = () => {
+            getHijriDate();
+            fetchPrayerTimes();
+            setInterval(updateClock, 1000); 
+            updateClock(); 
+            setInterval(fetchPrayerTimes, 6 * 60 * 60 * 1000); 
+        };
+
+    </script>
+</body>
+</html>
